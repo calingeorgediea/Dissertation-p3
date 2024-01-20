@@ -2,6 +2,13 @@ import streamlit as st
 from topic_models import lsa  # Importing LSA from the topic_models package
 from sklearn.datasets import fetch_20newsgroups
 import pandas as pd
+from topic_models import lda
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+nltk.download('punkt')
+nltk.download('stopwords')
+
 
 def load_data(subset_size=5):
     newsgroups = fetch_20newsgroups(subset='all', remove=('headers', 'footers', 'quotes'))
@@ -9,6 +16,18 @@ def load_data(subset_size=5):
     if subset_size is not None and subset_size < len(data):
         return data[:subset_size]
     return data
+
+def preprocess_documents(documents):
+    stop_words = set(stopwords.words('english'))
+    preprocessed_docs = []
+
+    for doc in documents:
+        # Tokenize and remove stop words
+        tokens = word_tokenize(doc)
+        filtered_tokens = [word for word in tokens if word.isalnum() and word not in stop_words]
+        preprocessed_docs.append(filtered_tokens)
+
+    return preprocessed_docs
 
 def display_results(topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity):
     st.write("Document-Term Matrix:")
@@ -42,7 +61,7 @@ def main():
 
     # Sidebar settings
     st.sidebar.title("Settings")
-    selected_model = st.sidebar.selectbox("Select a Topic Modeling Algorithm", ["LSA"])
+    selected_model = st.sidebar.selectbox("Select a Topic Modeling Algorithm", ["LSA", "LDA"])
     matrix_type = st.sidebar.selectbox("Select Matrix Type", ["raw", "tfidf"])
 
     # Hyperparameters for LSA
@@ -52,7 +71,7 @@ def main():
     # Load and display dataset info
     st.write("Using the 20 Newsgroups dataset for analysis.")
     documents = load_data()
-
+ 
     # Analyze button
     if st.button("Analyze"):
         if documents:
@@ -75,9 +94,12 @@ def main():
 
                 # Displaying the current run results
                 display_results(topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity)
-
-        else:
-            st.warning("Data could not be loaded. Please check the dataset.")
+            if selected_model == "LDA":
+                documents = preprocess_documents(documents)
+                lda_model, dictionary = lda.train_lda_model(documents, num_topics)
+                topics = lda.get_lda_topics(lda_model, dictionary)
+            else:
+                st.warning("Data could not be loaded. Please check the dataset.")
 
     # New view for stored results
     st.sidebar.title("Stored Results")
