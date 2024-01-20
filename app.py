@@ -6,11 +6,16 @@ from topic_models import lda
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+
+import pyLDAvis.gensim_models as gensimvis
+import pyLDAvis
+import streamlit.components.v1 as components
+
 nltk.download('punkt')
 nltk.download('stopwords')
 
 
-def load_data(subset_size=5):
+def load_data(subset_size=20):  # Default value is set to 20
     newsgroups = fetch_20newsgroups(subset='all', remove=('headers', 'footers', 'quotes'))
     data = newsgroups.data
     if subset_size is not None and subset_size < len(data):
@@ -28,6 +33,25 @@ def preprocess_documents(documents):
         preprocessed_docs.append(filtered_tokens)
 
     return preprocessed_docs
+
+def display_lda_results(topics):
+    st.write("LDA Topics:")
+    for i, topic in enumerate(topics):
+        topic_words = ", ".join([word for word, _ in topic])
+        st.write(f"Topic {i + 1}: {topic_words}")
+
+def display_lda_topic_charts(topics):
+    for i, topic in enumerate(topics):
+        words, probabilities = zip(*topic)
+        topic_df = pd.DataFrame({'Word': words, 'Probability': probabilities})
+        st.write(f"Topic {i + 1}")
+        st.bar_chart(topic_df.set_index('Word'))
+
+def display_lda_visualization(lda_model, corpus, dictionary):
+    vis = gensimvis.prepare(lda_model, corpus, dictionary)
+    html_string = pyLDAvis.prepared_data_to_html(vis)
+    components.html(html_string, width=800, height=600, scrolling=True)
+
 
 def display_results(topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity):
     st.write("Document-Term Matrix:")
@@ -63,15 +87,15 @@ def main():
     st.sidebar.title("Settings")
     selected_model = st.sidebar.selectbox("Select a Topic Modeling Algorithm", ["LSA", "LDA"])
     matrix_type = st.sidebar.selectbox("Select Matrix Type", ["raw", "tfidf"])
-
+    dataset_size = st.sidebar.slider("Select Dataset Size", min_value=5, max_value=100, value=20, step=5)
     # Hyperparameters for LSA
     num_topics = st.sidebar.slider("Number of Topics", 1, 20, 5)
     num_words = st.sidebar.slider("Number of Words per Topic", 1, 20, 5)
 
     # Load and display dataset info
     st.write("Using the 20 Newsgroups dataset for analysis.")
-    documents = load_data()
- 
+    documents = load_data(subset_size=dataset_size)
+    
     # Analyze button
     if st.button("Analyze"):
         if documents:
@@ -95,9 +119,14 @@ def main():
                 # Displaying the current run results
                 display_results(topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity)
             if selected_model == "LDA":
-                documents = preprocess_documents(documents)
-                lda_model, dictionary = lda.train_lda_model(documents, num_topics)
-                topics = lda.get_lda_topics(lda_model, dictionary)
+                preprocessed_documents = preprocess_documents(documents)
+                lda_model, dictionary = lda.train_lda_model(preprocessed_documents, num_topics)
+                corpus = [dictionary.doc2bow(doc) for doc in preprocessed_documents]
+                topics = lda.get_lda_topics(lda_model, dictionary, num_words)
+                # Display LDA Topics in Tabular Format
+                display_lda_results(topics)
+                # Optional: Display Bar Charts for Each Topic
+                display_lda_topic_charts(topics)
             else:
                 st.warning("Data could not be loaded. Please check the dataset.")
 
