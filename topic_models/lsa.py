@@ -3,6 +3,12 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import pandas as pd
 import numpy as np
 
+from sklearn.datasets import fetch_20newsgroups 
+
+def load_data():
+    newsgroups = fetch_20newsgroups(subset='all', remove=('headers', 'footers', 'quotes'))
+    return newsgroups
+
 def perform_lsa(text_data, num_topics, num_words, matrix_type='raw'):
 
     if matrix_type == 'tfidf':
@@ -35,4 +41,16 @@ def perform_lsa(text_data, num_topics, num_words, matrix_type='raw'):
         sorted_terms = sorted(terms_comp, key=lambda x: x[1], reverse=True)[:num_words]
         topics.append("Topic " + str(i+1) + ": " + ", ".join([t[0] for t in sorted_terms]))
 
-    return topics, doc_term_matrix, explained_variance, topic_term_matrix, sparsity
+    lsa = TruncatedSVD(n_components=num_topics)
+    lsa.fit(X)
+
+    # U matrix (documents in the latent topic space)
+    U_matrix = lsa.transform(X)
+
+    # Sigma matrix (diagonal matrix of singular values)
+    Sigma_matrix = np.diag(lsa.singular_values_)
+
+    # V^T matrix (topics in the latent feature space)
+    VT_matrix = lsa.components_
+
+    return topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity
