@@ -119,9 +119,9 @@ def main():
 
     # Sidebar settings
     st.sidebar.title("Settings")
-    selected_model = st.sidebar.selectbox("Select a Topic Modeling Algorithm", ["LSA", "LDA"])
+    selected_model = st.sidebar.selectbox("Select a Topic Modeling Algorithm", ["LDA", "LSA"])
         # In your sidebar settings in the main function
-    use_cache = st.sidebar.checkbox("Cache Documents", value=True)
+    use_cache = st.sidebar.checkbox("Cache Documents", value=False)
 
     matrix_type = st.sidebar.selectbox("Select Matrix Type", ["raw", "tfidf"])
     dataset_size = st.sidebar.slider("Select Dataset Size", min_value=5, max_value=100, value=20, step=5)
@@ -146,7 +146,8 @@ def main():
                 display_results(topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity)
 
             if selected_model == "LDA":
-                preprocessed_documents = preprocess_documents(documents)
+                
+                preprocessed_documents = documents
                 lda_model, dictionary = lda.train_lda_model(preprocessed_documents, num_topics)
                 corpus = [dictionary.doc2bow(doc) for doc in preprocessed_documents]
                 topics = lda.get_lda_topics(lda_model, dictionary, num_words)
