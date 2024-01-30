@@ -2,28 +2,34 @@ from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import pandas as pd
 import numpy as np
-
+import streamlit as st
 from sklearn.datasets import fetch_20newsgroups 
 
 def load_data():
+    
     newsgroups = fetch_20newsgroups(subset='all', remove=('headers', 'footers', 'quotes'))
     return newsgroups
 
 def perform_lsa(text_data, num_topics, num_words, matrix_type='raw'):
+    # Check if text_data is a list of strings
+    if not all(isinstance(doc, str) for doc in text_data):
+        # If not, assume it's a list of lists and join the tokens into strings
+        text_data = [' '.join(doc) for doc in text_data]
 
+    # Choose the vectorizer based on the specified matrix type
     if matrix_type == 'tfidf':
         vectorizer = TfidfVectorizer(stop_words='english')
     else:
         vectorizer = CountVectorizer(stop_words='english')
-    
-    X = vectorizer.fit_transform(text_data)
 
-    # Document-term matrix
+    # Create the document-term matrix
+    X = vectorizer.fit_transform(text_data)
     doc_term_matrix = pd.DataFrame(X.toarray(), columns=vectorizer.get_feature_names_out())
 
+    # Perform LSA
     lsa = TruncatedSVD(n_components=num_topics)
     lsa.fit(X)
-
+ 
     # Explained variance
     explained_variance = lsa.explained_variance_ratio_
 

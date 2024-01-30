@@ -11,9 +11,28 @@ import pyLDAvis.gensim_models as gensimvis
 import pyLDAvis
 import streamlit.components.v1 as components
 import random
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
+import gensim
+
+from gensim.utils import simple_preprocess
+from gensim.parsing.preprocessing import STOPWORDS
+
 nltk.download('punkt')
 nltk.download('stopwords')
+nltk.download('wordnet')
 
+def lemmatize_stemming(text):
+    lemmatizer = WordNetLemmatizer()
+    return lemmatizer.lemmatize(text, pos='v') # 'v' stands for verb, can change based on context
+
+def preprocess_text(text):
+    result = []
+    for token in gensim.utils.simple_preprocess(text):
+
+        if token not in gensim.parsing.preprocessing.STOPWORDS and len(token) > 3:
+            result.append(lemmatize_stemming(token))
+    return result
 
 @st.cache_data
 def load_cached_data(subset_size=20):
@@ -29,8 +48,11 @@ def load_new_data(subset_size=20):
     newsgroups = fetch_20newsgroups(subset='all', remove=('headers', 'footers', 'quotes'))
     data = newsgroups.data
     if subset_size is not None and subset_size < len(data):
-        return random.sample(data, subset_size)
-    return data
+        data = random.sample(data, subset_size)
+
+    processed_data = [preprocess_text(doc) for doc in data]
+         
+    return processed_data
 
 def preprocess_documents(documents):
     stop_words = set(stopwords.words('english'))
@@ -113,14 +135,14 @@ def main():
         documents = load_cached_data(subset_size=dataset_size)
     else:
         documents = load_new_data(subset_size=dataset_size)
-    
+
     # Analyze button
     if st.button("Analyze"):
         if documents:
+        
             if selected_model == "LSA":
                 # Performing LSA and getting intermediate results
                 topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity = lsa.perform_lsa(documents, num_topics, num_words, matrix_type)
-
                 display_results(topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity)
 
             if selected_model == "LDA":
