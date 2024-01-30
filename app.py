@@ -10,16 +10,26 @@ from nltk.tokenize import word_tokenize
 import pyLDAvis.gensim_models as gensimvis
 import pyLDAvis
 import streamlit.components.v1 as components
-
+import random
 nltk.download('punkt')
 nltk.download('stopwords')
 
 
-def load_data(subset_size=20):  # Default value is set to 20
+@st.cache_data
+def load_cached_data(subset_size=20):
+    newsgroups = fetch_20newsgroups(subset='all', remove=('headers', 'footers', 'quotes'))
+    data = newsgroups.data
+
+    if subset_size is not None and subset_size < len(data):
+        return random.sample(data, subset_size)
+    return data
+
+def load_new_data(subset_size=20):
+    st.cache_data.clear()
     newsgroups = fetch_20newsgroups(subset='all', remove=('headers', 'footers', 'quotes'))
     data = newsgroups.data
     if subset_size is not None and subset_size < len(data):
-        return data[:subset_size]
+        return random.sample(data, subset_size)
     return data
 
 def preprocess_documents(documents):
@@ -54,15 +64,17 @@ def display_lda_visualization(lda_model, corpus, dictionary):
 
 
 def display_results(topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity):
+    st.write("LSA Topics:")
+    for topic in topics:
+        st.write(topic)
+
+    st.write("Analysis")
     st.write("Document-Term Matrix:")
     st.dataframe(doc_term_matrix)
     st.write("Explained Variance by Each Topic:")
     st.bar_chart(explained_variance)
     st.write("Topic-Term Matrix:")
     st.dataframe(topic_term_matrix)
-    st.write("LSA Topics:")
-    for topic in topics:
-        st.write(topic)
     st.write(f"Matrix Sparsity: {sparsity:.2f}%")
     
     # Display SVD Matrices
@@ -86,6 +98,9 @@ def main():
     # Sidebar settings
     st.sidebar.title("Settings")
     selected_model = st.sidebar.selectbox("Select a Topic Modeling Algorithm", ["LSA", "LDA"])
+        # In your sidebar settings in the main function
+    use_cache = st.sidebar.checkbox("Cache Documents", value=True)
+
     matrix_type = st.sidebar.selectbox("Select Matrix Type", ["raw", "tfidf"])
     dataset_size = st.sidebar.slider("Select Dataset Size", min_value=5, max_value=100, value=20, step=5)
     # Hyperparameters for LSA
@@ -94,7 +109,10 @@ def main():
 
     # Load and display dataset info
     st.write("Using the 20 Newsgroups dataset for analysis.")
-    documents = load_data(subset_size=dataset_size)
+    if use_cache:
+        documents = load_cached_data(subset_size=dataset_size)
+    else:
+        documents = load_new_data(subset_size=dataset_size)
     
     # Analyze button
     if st.button("Analyze"):
@@ -103,21 +121,8 @@ def main():
                 # Performing LSA and getting intermediate results
                 topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity = lsa.perform_lsa(documents, num_topics, num_words, matrix_type)
 
-                # Update session state with new results
-                key = f"{selected_model}-{matrix_type}"
-                st.session_state['results'][key] = {
-                    'topics': topics,
-                    'doc_term_matrix': doc_term_matrix,
-                    'explained_variance': explained_variance,
-                    'topic_term_matrix': topic_term_matrix,
-                    'U_matrix': U_matrix,
-                    'Sigma_matrix': Sigma_matrix,
-                    'VT_matrix': VT_matrix,
-                    'sparsity': sparsity
-                }
-
-                # Displaying the current run results
                 display_results(topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity)
+
             if selected_model == "LDA":
                 preprocessed_documents = preprocess_documents(documents)
                 lda_model, dictionary = lda.train_lda_model(preprocessed_documents, num_topics)
@@ -127,6 +132,7 @@ def main():
                 display_lda_results(topics)
                 # Optional: Display Bar Charts for Each Topic
                 display_lda_topic_charts(topics)
+                
             else:
                 st.warning("Data could not be loaded. Please check the dataset.")
 
@@ -134,21 +140,7 @@ def main():
     st.sidebar.title("Stored Results")
     selected_result = st.sidebar.selectbox("Select a Result to View", list(st.session_state['results'].keys()))
 
-    if 'results' in st.session_state and selected_result:
-        result = st.session_state['results'][selected_result]
-        st.write(f"Results for {selected_result}")
-
-        # Display stored results
-        display_results(
-            result['topics'], 
-            result['doc_term_matrix'], 
-            result['explained_variance'], 
-            result['topic_term_matrix'], 
-            result.get('U_matrix'), 
-            result.get('Sigma_matrix'), 
-            result.get('VT_matrix'), 
-            result['sparsity']
-        )
+ 
 
 if __name__ == "__main__":
     main()
