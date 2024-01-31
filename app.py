@@ -33,12 +33,12 @@ def lemmatize_stemming(text):
 def preprocess_text(text):
     result = []
     for token in gensim.utils.simple_preprocess(text):
-
-        if token not in gensim.parsing.preprocessing.STOPWORDS and len(token) > 3:
+        if token not in gensim.parsing.preprocessing.STOPWORDS and len(token) > 3 and token.isalpha():
+            st.write(token)
             result.append(lemmatize_stemming(token))
     return result
 
-
+@st.cache_data
 def load_cached_data(subset_size=20):
     newsgroups = fetch_20newsgroups(subset='all', remove=('headers', 'footers', 'quotes'))
     data = newsgroups.data
@@ -56,7 +56,7 @@ def load_new_data(subset_size=20):
         return random.sample(data, subset_size)
 
     processed_data = [preprocess_text(doc) for doc in data]
-         
+    st.write(processed_data)
     return processed_data
 
 def preprocess_documents(documents):
@@ -145,14 +145,16 @@ def main():
     # Load and display dataset info
     st.write("Using the 20 Newsgroups dataset for analysis.")
     if use_cache:
+        st.write("Using cached data")
         documents = load_cached_data(subset_size=dataset_size)
     else:
+        st.write("Using new data")
         documents = load_new_data(subset_size=dataset_size)
 
     # Analyze button
     if st.button("Analyze"):
         if documents:
-        
+    
             if selected_model == "LSA":
                 # Performing LSA and getting intermediate results
                 topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity = lsa.perform_lsa(documents, num_topics, num_words, matrix_type)
