@@ -18,6 +18,10 @@ import gensim
 from gensim.utils import simple_preprocess
 from gensim.parsing.preprocessing import STOPWORDS
 
+
+from gpt2 import display_gpt2_page
+
+
 nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
@@ -119,6 +123,14 @@ def main():
 
     # Sidebar settings
     st.sidebar.title("Settings")
+    st.sidebar.title("GPT-2 Text Enrichment")
+    if st.sidebar.button("Go to GPT-2 Page"):
+        st.session_state['current_page'] = 'gpt2'
+
+    # Check the current page in session state
+    if st.session_state.get('current_page') == 'gpt2':
+        display_gpt2_page()  # Function from gpt2.py
+
     selected_model = st.sidebar.selectbox("Select a Topic Modeling Algorithm", ["LDA", "LSA"])
         # In your sidebar settings in the main function
     use_cache = st.sidebar.checkbox("Cache Documents", value=False)
@@ -166,4 +178,6 @@ def main():
  
 
 if __name__ == "__main__":
+    if 'current_page' not in st.session_state:
+        st.session_state['current_page'] = 'main'
     main()
