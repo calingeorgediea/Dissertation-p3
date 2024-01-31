@@ -38,21 +38,22 @@ def preprocess_text(text):
             result.append(lemmatize_stemming(token))
     return result
 
-@st.cache_data
+
 def load_cached_data(subset_size=20):
     newsgroups = fetch_20newsgroups(subset='all', remove=('headers', 'footers', 'quotes'))
     data = newsgroups.data
-
     if subset_size is not None and subset_size < len(data):
         return random.sample(data, subset_size)
-    return data
+
+    processed_data = [preprocess_text(doc) for doc in data]
+         
+    return processed_data
 
 def load_new_data(subset_size=20):
-    st.cache_data.clear()
     newsgroups = fetch_20newsgroups(subset='all', remove=('headers', 'footers', 'quotes'))
     data = newsgroups.data
     if subset_size is not None and subset_size < len(data):
-        data = random.sample(data, subset_size)
+        return random.sample(data, subset_size)
 
     processed_data = [preprocess_text(doc) for doc in data]
          
@@ -158,10 +159,12 @@ def main():
                 display_results(topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity)
 
             if selected_model == "LDA":
-                
-                preprocessed_documents = documents
-                lda_model, dictionary = lda.train_lda_model(preprocessed_documents, num_topics)
-                corpus = [dictionary.doc2bow(doc) for doc in preprocessed_documents]
+                lda_model, dictionary = lda.train_lda_model(documents, num_topics)
+
+                # Tokenize and preprocess the original documents again before creating the corpus
+                tokenized_documents = [preprocess_text(doc) for doc in documents]
+                corpus = [dictionary.doc2bow(doc) for doc in tokenized_documents]
+
                 topics = lda.get_lda_topics(lda_model, dictionary, num_words)
                 # Display LDA Topics in Tabular Format
                 display_lda_results(topics)
