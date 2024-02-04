@@ -34,7 +34,6 @@ def preprocess_text(text):
     result = []
     for token in gensim.utils.simple_preprocess(text):
         if token not in gensim.parsing.preprocessing.STOPWORDS and len(token) > 3 and token.isalpha():
-            st.write(token)
             result.append(lemmatize_stemming(token))
     return result
 
@@ -172,9 +171,6 @@ def main():
                 display_lda_results(topics)
                 # Optional: Display Bar Charts for Each Topic
                 display_lda_topic_charts(topics)
-                
-            else:
-                st.warning("Data could not be loaded. Please check the dataset.")
 
     # New view for stored results
     st.sidebar.title("Stored Results")
