@@ -4,11 +4,31 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 from sklearn.datasets import fetch_20newsgroups 
+from gensim.models.coherencemodel import CoherenceModel
+from gensim import corpora
+from gensim.utils import simple_preprocess
+from gensim.parsing.preprocessing import STOPWORDS
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
+import gensim
 
 def load_data():
     
     newsgroups = fetch_20newsgroups(subset='all', remove=('headers', 'footers', 'quotes'))
     return newsgroups
+
+
+def preprocess_text(text):
+    result = []
+    for token in gensim.utils.simple_preprocess(text):
+        if token not in gensim.parsing.preprocessing.STOPWORDS and len(token) > 3 and token.isalpha():
+            result.append(lemmatize_stemming(token))
+    return result
+
+def lemmatize_stemming(text):
+    lemmatizer = WordNetLemmatizer()
+    return lemmatizer.lemmatize(text, pos='v') # 'v' stands for verb, can change based on context
+
 
 def perform_lsa(text_data, num_topics, num_words, matrix_type='raw'):
     # Check if text_data is a list of strings
@@ -59,4 +79,28 @@ def perform_lsa(text_data, num_topics, num_words, matrix_type='raw'):
     # V^T matrix (topics in the latent feature space)
     VT_matrix = lsa.components_
 
-    return topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity
+    return topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity, lsa, vectorizer
+
+def compute_lsa_coherence_score(text_data, lsa_model, vectorizer, num_topics, num_words=5):
+    # Preprocess the text data
+    preprocessed_text_data = [preprocess_text(doc) for doc in text_data]
+
+    # Create a dictionary from the preprocessed text data
+    dictionary = corpora.Dictionary(preprocessed_text_data)
+
+    # Create a corpus using the dictionary
+    corpus = [dictionary.doc2bow(doc) for doc in preprocessed_text_data]
+
+    # Extract top words for each topic
+    top_words_per_topic = []
+    for topic_idx in range(num_topics):
+        topic_terms = lsa_model.components_[topic_idx]
+        top_terms_idx = topic_terms.argsort()[-num_words:][::-1]
+        top_words = [vectorizer.get_feature_names_out()[i] for i in top_terms_idx]
+        top_words_per_topic.append(top_words)
+
+    # Compute coherence score
+    coherence_model = CoherenceModel(topics=top_words_per_topic, texts=preprocessed_text_data, dictionary=dictionary, coherence='c_v')
+    coherence_score = coherence_model.get_coherence()
+
+    return coherence_score

@@ -7,6 +7,7 @@ from topic_models import nmf
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 import pyLDAvis.gensim_models as gensimvis
 import pyLDAvis
@@ -155,15 +156,23 @@ def main():
     
             if selected_model == "LSA":
                 num_topics = st.sidebar.slider("Number of Topics", 1, 20, 5)
-                topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity = lsa.perform_lsa(documents, num_topics, num_words, matrix_type)
+                # Capture the lsa_model and vectorizer
+        
+                topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity, lsa_model, vectorizer = lsa.perform_lsa(documents, num_topics, num_words, matrix_type)
+                coherence_score = lsa.compute_lsa_coherence_score(documents, lsa_model, vectorizer, num_topics, num_words=5)
+                st.write("LSA Topic Coherence Score:", coherence_score)
                 display_results(topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity)
+                
+                # Calculate and display the coherence score for LSA
+                
+                
 
             if selected_model == "NMF":
                 num_topics = st.sidebar.slider("Select Number of Topics for NMF", 2, 50, 5)
                 nmf_model, feature_names = nmf.train_nmf_model(documents, num_topics)
                 coherence_score = nmf.compute_coherence_score(documents, nmf_model, feature_names, num_words=5)
                 topics = nmf.get_nmf_topics(nmf_model, feature_names, num_words)
-                
+
                 st.write("Topic Coherence Score:", coherence_score)
                 st.write("NMF Topics:", topics)
                 
@@ -185,7 +194,7 @@ def main():
     st.sidebar.title("Stored Results")
     selected_result = st.sidebar.selectbox("Select a Result to View", list(st.session_state['results'].keys()))
 
- 
+
 
 if __name__ == "__main__":
     if 'current_page' not in st.session_state:
