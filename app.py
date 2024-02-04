@@ -3,6 +3,7 @@ from topic_models import lsa  # Importing LSA from the topic_models package
 from sklearn.datasets import fetch_20newsgroups
 import pandas as pd
 from topic_models import lda
+from topic_models import nmf
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
@@ -131,14 +132,12 @@ def main():
     if st.session_state.get('current_page') == 'gpt2':
         display_gpt2_page()  # Function from gpt2.py
 
-    selected_model = st.sidebar.selectbox("Select a Topic Modeling Algorithm", ["LDA", "LSA"])
+    selected_model = st.sidebar.selectbox("Select a Topic Modeling Algorithm", ["NMF", "LDA", "LSA"])
         # In your sidebar settings in the main function
     use_cache = st.sidebar.checkbox("Cache Documents", value=False)
 
     matrix_type = st.sidebar.selectbox("Select Matrix Type", ["raw", "tfidf"])
     dataset_size = st.sidebar.slider("Select Dataset Size", min_value=5, max_value=100, value=20, step=5)
-    # Hyperparameters for LSA
-    num_topics = st.sidebar.slider("Number of Topics", 1, 20, 5)
     num_words = st.sidebar.slider("Number of Words per Topic", 1, 20, 5)
 
     # Load and display dataset info
@@ -155,11 +154,21 @@ def main():
         if documents:
     
             if selected_model == "LSA":
-                # Performing LSA and getting intermediate results
+                num_topics = st.sidebar.slider("Number of Topics", 1, 20, 5)
                 topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity = lsa.perform_lsa(documents, num_topics, num_words, matrix_type)
                 display_results(topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity)
 
+            if selected_model == "NMF":
+                num_topics = st.sidebar.slider("Select Number of Topics for NMF", 2, 50, 5)
+                nmf_model, feature_names = nmf.train_nmf_model(documents, num_topics)
+                coherence_score = nmf.compute_coherence_score(documents, nmf_model, feature_names, num_words=5)
+                topics = nmf.get_nmf_topics(nmf_model, feature_names, num_words)
+                
+                st.write("Topic Coherence Score:", coherence_score)
+                st.write("NMF Topics:", topics)
+                
             if selected_model == "LDA":
+                num_topics = st.sidebar.slider("Number of Topics", 1, 20, 5)
                 lda_model, dictionary = lda.train_lda_model(documents, num_topics)
 
                 # Tokenize and preprocess the original documents again before creating the corpus
