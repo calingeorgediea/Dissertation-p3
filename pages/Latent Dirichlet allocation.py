@@ -19,7 +19,7 @@ import gensim
 from gensim.utils import simple_preprocess
 from gensim.parsing.preprocessing import STOPWORDS
 from gpt2 import display_gpt2_page
-
+import matplotlib.pyplot as plt
 import utils.preprocess as utils
 
 
@@ -131,6 +131,21 @@ def main():
         documents = load_new_data(subset_size=dataset_size)
 
     # Analyze button
+        
+    def display_autotune_results(lda_model, num_topics, dictionary, coherence_plot):
+        st.write(f"Best Model with {num_topics} Topics")
+        topics = lda.get_lda_topics(lda_model, dictionary, num_words)
+        display_lda_results(topics)
+        st.pyplot(coherence_plot)
+
+    # Modify the button handling in the main function
+    if st.button("Auto-tune LDA"):
+        if documents:
+            best_lda_model, best_num_topics, dictionary, coherence_plot = lda.autotune_lda_model(documents)
+            display_autotune_results(best_lda_model, best_num_topics, dictionary, coherence_plot)
+
+
+
     if st.button("Analyze"):
         if documents:
     
@@ -149,7 +164,8 @@ def main():
             display_lda_results(topics)
             history.store_run_results("LDA", topics, coherence_score, documents)
 
-        
+
+            
 
 if __name__ == "__main__":
     if 'current_page' not in st.session_state:

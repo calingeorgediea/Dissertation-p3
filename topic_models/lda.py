@@ -5,7 +5,7 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 import streamlit as st
 from gensim.models import CoherenceModel
-# Ensure necessary NLTK data is downloaded
+import matplotlib.pyplot as plt
 nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
@@ -26,7 +26,7 @@ def preprocess_text(text):
     lemmatizer = WordNetLemmatizer()
     return [lemmatizer.lemmatize(word) for word in tokens]
 
-def find_best_lda_model(documents, max_topics=10, max_words_per_topic=10):
+def train_lda_model(documents, num_topics=5):
     # Preprocess and tokenize the documents
     tokenized_documents = [preprocess_text(doc) for doc in documents]
     
@@ -36,42 +36,18 @@ def find_best_lda_model(documents, max_topics=10, max_words_per_topic=10):
     # Create a document-term matrix
     doc_term_matrix = [dictionary.doc2bow(doc) for doc in tokenized_documents]
 
-    best_lda_model = None
-    best_coherence_score = -1.0  # Initialize with a low value
-    best_num_topics = 0
-    best_num_words_per_topic = 0
+    # Train the LDA model
+    lda_model = models.LdaModel(doc_term_matrix, num_topics=num_topics, id2word=dictionary, passes=50)
 
-    for num_topics in range(1, max_topics + 1):
-        for num_words_per_topic in range(1, max_words_per_topic + 1):
-            lda_model = models.LdaModel(doc_term_matrix, num_topics=num_topics, id2word=dictionary, passes=50)
-            coherence_score = calculate_coherence_score(lda_model, tokenized_documents, dictionary)
+    # Calculate coherence score
+    coherence_score = calculate_coherence_score(lda_model, tokenized_documents, dictionary)
 
-            if coherence_score > best_coherence_score:
-                best_lda_model = lda_model
-                best_coherence_score = coherence_score
-                best_num_topics = num_topics
-                best_num_words_per_topic = num_words_per_topic
+    # Calculate perplexity score
+    perplexity_score = lda_model.log_perplexity(doc_term_matrix)
 
-    # Plot convergence data for the best model
-    plot_convergence(best_lda_model, tokenized_documents, dictionary)
+    return lda_model, dictionary, coherence_score, perplexity_score
 
-    return best_lda_model, dictionary, best_num_topics, best_num_words_per_topic, best_coherence_score
 
-def plot_coherence_scores(coherence_scores, num_topics_range, num_words_per_topic_range):
-    # Create a 2D grid of coherence scores
-    scores_grid = [[coherence_scores[i * len(num_words_per_topic_range) + j] for j in range(len(num_words_per_topic_range))] for i in range(len(num_topics_range))]
-
-    # Plot the heatmap of coherence scores
-    plt.figure(figsize=(10, 6))
-    plt.imshow(scores_grid, cmap='viridis', origin='lower', aspect='auto')
-    plt.colorbar()
-    plt.xticks(range(len(num_words_per_topic_range)), num_words_per_topic_range)
-    plt.yticks(range(len(num_topics_range)), num_topics_range)
-    plt.xlabel('Words per Topic')
-    plt.ylabel('Number of Topics')
-    plt.title('Coherence Scores Heatmap')
-    plt.show()
-    
 def calculate_coherence_score(lda_model, tokenized_documents, dictionary):
     """
     Calculate the coherence score for the LDA model.
@@ -86,7 +62,32 @@ def calculate_coherence_score(lda_model, tokenized_documents, dictionary):
     """
     coherence_model_lda = CoherenceModel(model=lda_model, texts=tokenized_documents, dictionary=dictionary, coherence='c_v')
     return coherence_model_lda.get_coherence()
-
+    
 def get_lda_topics(lda_model, dictionary, num_words=5):
     return [lda_model.show_topic(topicid, num_words) for topicid in range(lda_model.num_topics)]
 
+def autotune_lda_model(documents, min_topics=2, max_topics=10, step=1):
+    coherence_scores = []
+    models = []
+
+    for num_topics in range(min_topics, max_topics + 1, step):
+        lda_model, _, coherence_score, _ = train_lda_model(documents, num_topics)
+        coherence_scores.append(coherence_score)
+        models.append(lda_model)
+
+    # Creating coherence scores plot
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(min_topics, max_topics + 1, step), coherence_scores)
+    plt.xlabel('Number of Topics')
+    plt.ylabel('Coherence Score')
+    plt.title('Coherence Scores for Different Numbers of Topics')
+
+    # Select the model with the highest coherence score
+    best_model_index = coherence_scores.index(max(coherence_scores))
+    best_model = models[best_model_index]
+    best_num_topics = range(min_topics, max_topics + 1, step)[best_model_index]
+
+    # Get the dictionary used for the best model
+    _, dictionary, _, _ = train_lda_model(documents, best_num_topics)
+
+    return best_model, best_num_topics, dictionary, plt
