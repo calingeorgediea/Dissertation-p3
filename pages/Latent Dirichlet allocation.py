@@ -27,6 +27,14 @@ user_input_text = st.text_area("Enter your text for analysis (Optional)")
 num_topics = st.sidebar.slider("Number of Topics", 1, 20, 5)
 
 
+start_topics = st.sidebar.slider("Start Number of Topics", 1, 20, 1)
+end_topics = st.sidebar.slider("End Number of Topics", 1, 20, 3)
+topics_step = st.sidebar.slider("Step for Number of Topics", 1, 5, 1)
+
+start_words = st.sidebar.slider("Start Number of Words per Topic", 1, 20, 1)
+end_words = st.sidebar.slider("End Number of Words per Topic", 1, 20, 3)
+words_step = st.sidebar.slider("Step for Number of Words per Topic", 1, 5, 1)
+
 @st.cache_data
 def load_cached_data(subset_size=20):
     newsgroups = fetch_20newsgroups(subset='all', remove=('headers', 'footers', 'quotes'))
@@ -94,6 +102,8 @@ def display_results(topics, doc_term_matrix, explained_variance, topic_term_matr
     st.dataframe(topic_term_matrix)
     st.write(f"Matrix Sparsity: {sparsity:.2f}%")
     
+
+
     # Display SVD Matrices
     if U_matrix is not None:
         st.write("U Matrix (Document-Topic Matrix):")
@@ -138,7 +148,17 @@ def main():
         display_lda_results(topics)
         st.pyplot(coherence_plot)
 
-    # Modify the button handling in the main function
+    if st.button("Convergence Analysis"):
+        if documents:
+            convergence_results = lda.convergence_lda_model(documents, start_topics, end_topics, topics_step, start_words, end_words, words_step)
+            
+            # Plotting Coherence Scores
+            # You can create a plot to show how coherence scores vary with different numbers of topics and words
+
+            # Displaying Topics and Words for each step
+            for result in convergence_results:
+                st.write(f"Number of Topics: {result['num_topics']}, Number of Words: {result['num_words']}")
+                display_lda_results(result['topics'])
     if st.button("Auto-tune LDA"):
         if documents:
             best_lda_model, best_num_topics, dictionary, coherence_plot = lda.autotune_lda_model(documents)
