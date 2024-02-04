@@ -79,7 +79,9 @@ def perform_lsa(text_data, num_topics, num_words, matrix_type='raw'):
     # V^T matrix (topics in the latent feature space)
     VT_matrix = lsa.components_
 
-    return topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity, lsa, vectorizer
+    reconstruction_error = calculate_reconstruction_error(X, lsa, num_topics)
+
+    return topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity, lsa, vectorizer, reconstruction_error
 
 def compute_lsa_coherence_score(text_data, lsa_model, vectorizer, num_topics, num_words=5):
     # Preprocess the text data
@@ -104,3 +106,23 @@ def compute_lsa_coherence_score(text_data, lsa_model, vectorizer, num_topics, nu
     coherence_score = coherence_model.get_coherence()
 
     return coherence_score
+
+def calculate_reconstruction_error(X, lsa_model, num_topics):
+    """
+    Calculate the reconstruction error for the LSA model.
+    
+    Args:
+    X: The original document-term matrix.
+    lsa_model: Trained LSA model.
+    num_topics: Number of topics.
+
+    Returns:
+    Reconstruction error.
+    """
+    # Reconstruct the matrix using LSA components
+    reconstructed_X = lsa_model.transform(X) @ lsa_model.components_
+
+    # Calculate the Frobenius norm (difference between the original and reconstructed matrix)
+    reconstruction_error = np.linalg.norm(X - reconstructed_X, 'fro')
+
+    return reconstruction_error

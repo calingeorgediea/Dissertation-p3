@@ -42,7 +42,11 @@ def train_lda_model(documents, num_topics=5):
     # Calculate coherence score
     coherence_score = calculate_coherence_score(lda_model, tokenized_documents, dictionary)
 
-    return lda_model, dictionary, coherence_score
+    # Calculate perplexity score
+    perplexity_score = lda_model.log_perplexity(doc_term_matrix)
+
+    return lda_model, dictionary, coherence_score, perplexity_score
+
 
 def calculate_coherence_score(lda_model, tokenized_documents, dictionary):
     """

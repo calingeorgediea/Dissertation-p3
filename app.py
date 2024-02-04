@@ -158,9 +158,10 @@ def main():
                 num_topics = st.sidebar.slider("Number of Topics", 1, 20, 5)
                 # Capture the lsa_model and vectorizer
         
-                topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity, lsa_model, vectorizer = lsa.perform_lsa(documents, num_topics, num_words, matrix_type)
+                topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity, lsa_model, vectorizer,reconstruction_error = lsa.perform_lsa(documents, num_topics, num_words, matrix_type)
                 coherence_score = lsa.compute_lsa_coherence_score(documents, lsa_model, vectorizer, num_topics, num_words=5)
                 st.write("LSA Topic Coherence Score:", coherence_score)
+                st.write("Reconstruction error", reconstruction_error)
                 display_results(topics, doc_term_matrix, explained_variance, topic_term_matrix, U_matrix, Sigma_matrix, VT_matrix, sparsity)
                 
                 # Calculate and display the coherence score for LSA
@@ -178,7 +179,7 @@ def main():
                 
             if selected_model == "LDA":
                 num_topics = st.sidebar.slider("Number of Topics", 1, 20, 5)
-                lda_model, dictionary, coherence_score = lda.train_lda_model(documents, num_topics)
+                lda_model, dictionary, coherence_score, perplexity_score = lda.train_lda_model(documents, num_topics)
 
                 # Tokenize and preprocess the original documents again before creating the corpus
                 tokenized_documents = [preprocess_text(doc) for doc in documents]
@@ -186,6 +187,7 @@ def main():
                 # Calculate and display the coherence score for LDA
             
                 st.write("LDA Topic Coherence Score:", coherence_score)
+                st.write("Perplexity Score:", perplexity_score)
 
                 topics = lda.get_lda_topics(lda_model, dictionary, num_words)
                 # Display LDA Topics in Tabular Format
