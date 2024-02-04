@@ -178,17 +178,18 @@ def main():
                 
             if selected_model == "LDA":
                 num_topics = st.sidebar.slider("Number of Topics", 1, 20, 5)
-                lda_model, dictionary = lda.train_lda_model(documents, num_topics)
+                lda_model, dictionary, coherence_score = lda.train_lda_model(documents, num_topics)
 
                 # Tokenize and preprocess the original documents again before creating the corpus
                 tokenized_documents = [preprocess_text(doc) for doc in documents]
-                corpus = [dictionary.doc2bow(doc) for doc in tokenized_documents]
+
+                # Calculate and display the coherence score for LDA
+            
+                st.write("LDA Topic Coherence Score:", coherence_score)
 
                 topics = lda.get_lda_topics(lda_model, dictionary, num_words)
                 # Display LDA Topics in Tabular Format
                 display_lda_results(topics)
-                # Optional: Display Bar Charts for Each Topic
-                display_lda_topic_charts(topics)
 
     # New view for stored results
     st.sidebar.title("Stored Results")
