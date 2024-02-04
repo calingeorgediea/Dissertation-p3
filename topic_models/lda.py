@@ -26,7 +26,7 @@ def preprocess_text(text):
     lemmatizer = WordNetLemmatizer()
     return [lemmatizer.lemmatize(word) for word in tokens]
 
-def train_lda_model(documents, num_topics=5):
+def find_best_lda_model(documents, max_topics=10, max_words_per_topic=10):
     # Preprocess and tokenize the documents
     tokenized_documents = [preprocess_text(doc) for doc in documents]
     
@@ -36,18 +36,42 @@ def train_lda_model(documents, num_topics=5):
     # Create a document-term matrix
     doc_term_matrix = [dictionary.doc2bow(doc) for doc in tokenized_documents]
 
-    # Train the LDA model
-    lda_model = models.LdaModel(doc_term_matrix, num_topics=num_topics, id2word=dictionary, passes=50)
+    best_lda_model = None
+    best_coherence_score = -1.0  # Initialize with a low value
+    best_num_topics = 0
+    best_num_words_per_topic = 0
 
-    # Calculate coherence score
-    coherence_score = calculate_coherence_score(lda_model, tokenized_documents, dictionary)
+    for num_topics in range(1, max_topics + 1):
+        for num_words_per_topic in range(1, max_words_per_topic + 1):
+            lda_model = models.LdaModel(doc_term_matrix, num_topics=num_topics, id2word=dictionary, passes=50)
+            coherence_score = calculate_coherence_score(lda_model, tokenized_documents, dictionary)
 
-    # Calculate perplexity score
-    perplexity_score = lda_model.log_perplexity(doc_term_matrix)
+            if coherence_score > best_coherence_score:
+                best_lda_model = lda_model
+                best_coherence_score = coherence_score
+                best_num_topics = num_topics
+                best_num_words_per_topic = num_words_per_topic
 
-    return lda_model, dictionary, coherence_score, perplexity_score
+    # Plot convergence data for the best model
+    plot_convergence(best_lda_model, tokenized_documents, dictionary)
 
+    return best_lda_model, dictionary, best_num_topics, best_num_words_per_topic, best_coherence_score
 
+def plot_coherence_scores(coherence_scores, num_topics_range, num_words_per_topic_range):
+    # Create a 2D grid of coherence scores
+    scores_grid = [[coherence_scores[i * len(num_words_per_topic_range) + j] for j in range(len(num_words_per_topic_range))] for i in range(len(num_topics_range))]
+
+    # Plot the heatmap of coherence scores
+    plt.figure(figsize=(10, 6))
+    plt.imshow(scores_grid, cmap='viridis', origin='lower', aspect='auto')
+    plt.colorbar()
+    plt.xticks(range(len(num_words_per_topic_range)), num_words_per_topic_range)
+    plt.yticks(range(len(num_topics_range)), num_topics_range)
+    plt.xlabel('Words per Topic')
+    plt.ylabel('Number of Topics')
+    plt.title('Coherence Scores Heatmap')
+    plt.show()
+    
 def calculate_coherence_score(lda_model, tokenized_documents, dictionary):
     """
     Calculate the coherence score for the LDA model.
