@@ -21,6 +21,9 @@ from gensim.parsing.preprocessing import STOPWORDS
 from gpt2 import display_gpt2_page
 import matplotlib.pyplot as plt
 import utils.preprocess as utils
+import plotly.offline as py
+import plotly.graph_objs as go
+import plotly.figure_factory as ff
 
 
 user_input_text = st.text_area("Enter your text for analysis (Optional)")
@@ -159,10 +162,10 @@ def main():
             for result in convergence_results:
                 st.write(f"Number of Topics: {result['num_topics']}, Number of Words: {result['num_words']}")
                 display_lda_results(result['topics'])
-    if st.button("Auto-tune LDA"):
-        if documents:
-            best_lda_model, best_num_topics, dictionary, coherence_plot = lda.autotune_lda_model(documents)
-            display_autotune_results(best_lda_model, best_num_topics, dictionary, coherence_plot)
+    # if st.button("Auto-tune LDA"):
+    #     if documents:
+    #         best_lda_model, best_num_topics, dictionary, coherence_plot = lda.autotune_lda_model(documents)
+    #         display_autotune_results(best_lda_model, best_num_topics, dictionary, coherence_plot)
 
 
 

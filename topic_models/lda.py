@@ -6,6 +6,14 @@ from nltk.stem import WordNetLemmatizer
 import streamlit as st
 from gensim.models import CoherenceModel
 import matplotlib.pyplot as plt
+import plotly.offline as py
+import plotly.graph_objs as go
+import plotly.figure_factory as ff
+from gensim.matutils import jensen_shannon
+from scipy import spatial as scs
+from scipy.cluster import hierarchy as sch
+from scipy.spatial.distance import pdist, squareform
+
 nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
