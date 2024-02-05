@@ -24,7 +24,7 @@ import utils.preprocess as utils
 import plotly.offline as py
 import plotly.graph_objs as go
 import plotly.figure_factory as ff
-
+import numpy as np
 
 user_input_text = st.text_area("Enter your text for analysis (Optional)")
 num_topics = st.sidebar.slider("Number of Topics", 1, 20, 5)
@@ -186,7 +186,12 @@ def main():
             # Display LDA Topics in Tabular Format
             display_lda_results(topics)
             history.store_run_results("LDA", topics, coherence_score, documents)
+            lda_model, dictionary, coherence_score, perplexity_score = lda.train_lda_model(documents, num_topics)
+            topic_terms = [lda_model.show_topic(topic, num_words) for topic in range(lda_model.num_topics)]
+            dendrogram = lda.create_topic_dendrogram(lda_model, topic_terms)
 
+            # Display the dendrogram
+            st.plotly_chart(dendrogram)
 
             
 

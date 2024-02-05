@@ -13,7 +13,7 @@ from gensim.matutils import jensen_shannon
 from scipy import spatial as scs
 from scipy.cluster import hierarchy as sch
 from scipy.spatial.distance import pdist, squareform
-
+import numpy as np
 nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
@@ -144,3 +144,76 @@ def convergence_lda_model(documents, start_topics, end_topics, step, start_words
 
     return results
 
+def create_topic_dendrogram(lda_model, topic_terms):
+    # Get topic distributions
+    topic_dist = lda_model.state.get_lambda()
+
+    # Use Jensen-Shannon distance metric in dendrogram
+    def js_dist(X):
+        return pdist(X, lambda u, v: jensen_shannon(u, v))
+
+    # Calculate text annotations for the dendrogram
+    def text_annotation(topic_dist, topic_terms):
+        # Calculate Jensen-Shannon distance between topics
+        d = js_dist(topic_dist)
+        Z = sch.linkage(d, 'single')
+        P = sch.dendrogram(Z, orientation="bottom", no_plot=True)
+        n_ann_terms = 10
+        # Store topic no. (leaves) corresponding to the x-ticks in the dendrogram
+        x_ticks = np.arange(5, len(P['leaves']) * 10 + 5, 10)
+        x_topic = dict(zip(P['leaves'], x_ticks))
+
+        # Store {topic no.:topic terms}
+        topic_vals = dict()
+        for key, val in x_topic.items():
+            topic_vals[val] = (topic_terms[key], topic_terms[key])
+
+        text_annotations = []
+
+        # Loop through every trace (scatter plot) in the dendrogram
+        for trace in P['icoord']:
+            fst_topic = topic_vals[trace[0]]
+            scnd_topic = topic_vals[trace[2]]
+
+            # Annotation for two ends of the current trace
+            pos_tokens_t1 = list(fst_topic[0])[:min(len(fst_topic[0]), n_ann_terms)]
+            neg_tokens_t1 = list(fst_topic[1])[:min(len(fst_topic[1]), n_ann_terms)]
+
+            pos_tokens_t4 = list(scnd_topic[0])[:min(len(scnd_topic[0]), n_ann_terms)]
+            neg_tokens_t4 = list(scnd_topic[1])[:min(len(scnd_topic[1]), n_ann_terms)]
+
+            t1 = "<br>".join((": ".join(("+++", str(pos_tokens_t1))), ": ".join(("---", str(neg_tokens_t1)))))
+            t2 = t3 = ()
+            t4 = "<br>".join((": ".join(("+++", str(pos_tokens_t4))), ": ".join(("---", str(neg_tokens_t4)))))
+
+            # Show topic terms in leaves
+            if trace[0] in x_ticks:
+                t1 = str(list(topic_vals[trace[0]][0])[:n_ann_terms])
+            if trace[2] in x_ticks:
+                t4 = str(list(topic_vals[trace[2]][0])[:n_ann_terms])
+
+            text_annotations.append([t1, t2, t3, t4])
+
+            # Calculate intersecting/diff for upper level
+            # Calculate intersecting/diff for upper level
+            intersecting = set(fst_topic[0]).intersection(scnd_topic[0])
+            different = set(fst_topic[0]).symmetric_difference(scnd_topic[0])
+
+
+            center = (trace[0] + trace[2]) / 2
+            topic_vals[center] = (intersecting, different)
+
+            # Remove trace value after it is annotated
+            topic_vals.pop(trace[0], None)
+            topic_vals.pop(trace[2], None)
+
+        return text_annotations
+
+    # Get text annotations
+    annotation = text_annotation(topic_dist, topic_terms)
+
+    # Plot dendrogram
+    dendro = ff.create_dendrogram(topic_dist, distfun=js_dist, labels=range(1, len(topic_dist) + 1),
+                                  linkagefun=lambda x: sch.linkage(x, 'single'), hovertext=annotation)
+    dendro['layout'].update({'width': 1000, 'height': 600})
+    return dendro
